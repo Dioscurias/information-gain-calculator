@@ -1272,14 +1272,20 @@ function buildID3(data, availableAttrs, targetIdx) {
   const vals = [...new Set(data.map(r => r[bestAttr]))];
   const remaining = availableAttrs.filter(a => a !== bestAttr);
 
+  const parentAttrName = node.attribute;
   for (const v of vals) {
     const subset = data.filter(r => r[bestAttr] === v);
     const edgeRatio = subset.length / data.length;
     if (subset.length === 0) {
       const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
-      node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0, targetName, classCounts: {} } });
+      node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0, targetName, classCounts: {}, parentAttr: parentAttrName, parentValue: v } });
     } else {
-      node.children.push({ edgeLabel: v, edgeCount: subset.length, edgeRatio, child: buildID3(subset, remaining, targetIdx) });
+      const child = buildID3(subset, remaining, targetIdx);
+      if (child.type === 'leaf') {
+        child.parentAttr = parentAttrName;
+        child.parentValue = v;
+      }
+      node.children.push({ edgeLabel: v, edgeCount: subset.length, edgeRatio, child });
     }
   }
 
@@ -1312,8 +1318,8 @@ function renderTree(tree) {
 
 const NODE_W = 140;
 const NODE_H = 52;
-const LEAF_W = 140;
-const LEAF_H = 62;
+const LEAF_W = 150;
+const LEAF_H = 76;
 const H_GAP = 44;
 const V_GAP = 100;
 
@@ -1405,11 +1411,24 @@ function renderNodes(layout, offX, offY, parentAbsX, totalCount) {
     const tName = layout.node.targetName || 'Target';
     const classCounts = layout.node.classCounts || {};
     const classStr = Object.entries(classCounts).map(([k,v]) => `${k}:${v}`).join(' | ');
+    const pAttr = layout.node.parentAttr;
+    const pVal = layout.node.parentValue;
+    const condLine = pAttr ? `${pAttr} = ${pVal}` : '';
+    const hasCondition = condLine.length > 0;
+    const boxH = hasCondition ? LEAF_H + 14 : LEAF_H;
+    const boxW = Math.max(LEAF_W, (condLine.length * 6.5) + 20);
     svg += `<g class="tree-node">`;
-    svg += `<rect x="${absX - LEAF_W / 2}" y="${absY - LEAF_H / 2}" width="${LEAF_W}" height="${LEAF_H}" fill="#0a1a10" stroke="#22c55e" filter="url(#glowGold)" stroke-opacity="0.6"/>`;
-    svg += `<text x="${absX}" y="${absY - 16}" style="fill:#64748b;font-size:9px;">${escHTML(tName)}</text>`;
-    svg += `<text x="${absX}" y="${absY}" style="fill:#22c55e;font-weight:bold;font-size:13px;">${escHTML(layout.node.label)}</text>`;
-    svg += `<text class="edge-label" x="${absX}" y="${absY + 16}" style="font-size:8px;">${classStr ? escHTML(classStr) : nodeCount + ' (' + nodePct + '%)'}</text>`;
+    svg += `<rect x="${absX - boxW / 2}" y="${absY - boxH / 2}" width="${boxW}" height="${boxH}" fill="#0a1a10" stroke="#22c55e" filter="url(#glowGold)" stroke-opacity="0.6"/>`;
+    if (hasCondition) {
+      svg += `<text x="${absX}" y="${absY - 20}" style="fill:#0ea5e9;font-size:9px;font-weight:bold;">${escHTML(condLine)}</text>`;
+      svg += `<text x="${absX}" y="${absY - 6}" style="fill:#64748b;font-size:8px;">${escHTML(tName)}</text>`;
+      svg += `<text x="${absX}" y="${absY + 10}" style="fill:#22c55e;font-weight:bold;font-size:13px;">${escHTML(layout.node.label)}</text>`;
+      svg += `<text class="edge-label" x="${absX}" y="${absY + 26}" style="font-size:8px;">${classStr ? escHTML(classStr) : nodeCount + ' (' + nodePct + '%)'}</text>`;
+    } else {
+      svg += `<text x="${absX}" y="${absY - 16}" style="fill:#64748b;font-size:9px;">${escHTML(tName)}</text>`;
+      svg += `<text x="${absX}" y="${absY}" style="fill:#22c55e;font-weight:bold;font-size:13px;">${escHTML(layout.node.label)}</text>`;
+      svg += `<text class="edge-label" x="${absX}" y="${absY + 16}" style="font-size:8px;">${classStr ? escHTML(classStr) : nodeCount + ' (' + nodePct + '%)'}</text>`;
+    }
     svg += `</g>`;
   } else {
     svg += `<g class="tree-node">`;
