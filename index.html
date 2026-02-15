@@ -5,34 +5,210 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Information Gain Calculator & Decision Tree Builder</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-    min-height: 100vh;
-    line-height: 1.6;
+  :root {
+    --bg-deep: #050a0f;
+    --bg-panel: #0a1118;
+    --bg-card: #0d1620;
+    --border-dim: #1a2a3a;
+    --border-glow: #0ea5e9;
+    --accent-blue: #0ea5e9;
+    --accent-cyan: #22d3ee;
+    --accent-red: #ef4444;
+    --accent-gold: #f59e0b;
+    --accent-arc: #38bdf8;
+    --text-primary: #e0f2fe;
+    --text-dim: #64748b;
+    --text-muted: #475569;
+    --glow-blue: 0 0 15px rgba(14, 165, 233, 0.3), 0 0 40px rgba(14, 165, 233, 0.1);
+    --glow-red: 0 0 15px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1);
+    --glow-gold: 0 0 15px rgba(245, 158, 11, 0.3);
   }
 
+  body {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      linear-gradient(rgba(14, 165, 233, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scan line overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(14, 165, 233, 0.015) 2px,
+      rgba(14, 165, 233, 0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanDrift 8s linear infinite;
+  }
+
+  @keyframes scanDrift {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(14, 165, 233, 0.2), inset 0 0 8px rgba(14, 165, 233, 0.05); }
+    50% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.4), inset 0 0 15px rgba(14, 165, 233, 0.08); }
+  }
+
+  @keyframes borderGlow {
+    0%, 100% { border-color: rgba(14, 165, 233, 0.25); }
+    50% { border-color: rgba(14, 165, 233, 0.5); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes arcReactorSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes dataStream {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 0% 100%; }
+  }
+
+  /* Header */
   header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-bottom: 1px solid #334155;
-    padding: 1.5rem 2rem;
+    position: relative;
+    background: linear-gradient(180deg, #0a1118 0%, var(--bg-deep) 100%);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 1.5rem 2rem 1.25rem;
     text-align: center;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-cyan), var(--accent-blue), transparent);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-red) 30%, var(--accent-gold) 50%, var(--accent-red) 70%, transparent);
+  }
+
+  /* Arc reactor decoration */
+  .arc-reactor {
+    display: inline-block;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-blue);
+    position: relative;
+    margin-bottom: 0.5rem;
+    box-shadow: var(--glow-blue);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+
+  .arc-reactor::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 16px; height: 16px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-cyan), var(--accent-blue) 60%, transparent 70%);
+    box-shadow: 0 0 20px var(--accent-cyan), 0 0 40px rgba(34, 211, 238, 0.3);
+  }
+
+  .arc-reactor::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    border-radius: 50%;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+    border-top-color: var(--accent-cyan);
+    animation: arcReactorSpin 4s linear infinite;
   }
 
   header h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue), #818cf8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(14, 165, 233, 0.3));
   }
 
-  header p { color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem; }
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    margin-top: 0.3rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
 
+  .status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 0.75rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
 
+  .status-bar .status-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .status-dot.green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+  .status-dot.blue { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+  .status-dot.gold { background: var(--accent-gold); box-shadow: 0 0 8px var(--accent-gold); animation: pulse 2s ease-in-out infinite; }
+
+  /* Container */
   .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -40,90 +216,179 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
+    position: relative;
+    z-index: 1;
   }
 
   .full-width { grid-column: 1 / -1; }
 
+  /* Cards - HUD panels */
   .card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 4px;
     padding: 1.25rem;
     overflow: hidden;
+    position: relative;
+    animation: borderGlow 4s ease-in-out infinite;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 40px; height: 2px;
+    background: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue);
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px; height: 40px;
+    background: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue);
   }
 
   .card h2 {
-    font-size: 1.1rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
     margin-bottom: 1rem;
-    color: #f1f5f9;
+    color: var(--accent-cyan);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
   }
 
   .card h2 .icon {
     width: 28px; height: 28px;
-    border-radius: 6px;
+    border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    border: 1px solid;
   }
 
+  .card h2 .divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-dim), transparent);
+    margin-left: 0.5rem;
+  }
+
+  /* Buttons */
   .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 
   button {
     padding: 0.5rem 1rem;
-    border: 1px solid #475569;
-    border-radius: 8px;
-    background: #334155;
-    color: #e2e8f0;
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+    background: rgba(14, 165, 233, 0.06);
+    color: var(--text-primary);
     cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.15s;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
   }
 
-  button:hover { background: #475569; border-color: #64748b; }
+  button::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.1), transparent);
+    transition: left 0.4s;
+  }
+
+  button:hover::before { left: 100%; }
+  button:hover {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.15);
+    color: var(--accent-cyan);
+  }
 
   .btn-primary {
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    border: none;
-    color: #fff;
-    font-weight: 600;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(99, 102, 241, 0.2));
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-cyan);
+    font-weight: 700;
     padding: 0.6rem 1.5rem;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.15), inset 0 0 10px rgba(14, 165, 233, 0.05);
   }
 
-  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(99, 102, 241, 0.3));
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.3), inset 0 0 15px rgba(14, 165, 233, 0.08);
+  }
 
-  .btn-danger { border-color: #ef4444; color: #f87171; }
-  .btn-danger:hover { background: #7f1d1d; }
+  .btn-danger {
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.06);
+  }
+
+  .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: var(--accent-red);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  }
 
   /* Data Table */
-  .table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+  }
+
+  .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .table-wrap::-webkit-scrollbar-track { background: var(--bg-deep); }
+  .table-wrap::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
 
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   th, td {
     padding: 0.5rem 0.75rem;
-    border: 1px solid #334155;
+    border: 1px solid rgba(26, 42, 58, 0.6);
     text-align: left;
     white-space: nowrap;
   }
 
   th {
-    background: #0f172a;
+    background: var(--bg-deep);
     position: sticky;
     top: 0;
     z-index: 1;
     font-weight: 600;
+    color: var(--accent-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
 
-  th.target-col { color: #f59e0b; }
+  th.target-col { color: var(--accent-gold); }
 
-  td { background: #1e293b; }
+  td {
+    background: var(--bg-card);
+    transition: background 0.15s;
+  }
 
   th input, td input {
     background: transparent;
@@ -131,147 +396,505 @@
     color: inherit;
     width: 100%;
     min-width: 60px;
-    font-size: 0.85rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
     outline: none;
     padding: 2px;
   }
 
-  th input { font-weight: 600; }
-  th input::placeholder, td input::placeholder { color: #475569; }
+  th input {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
 
-  td input:focus { background: #0f172a; border-radius: 3px; }
-
-  tr:hover td { background: #263348; }
+  th input::placeholder, td input::placeholder { color: var(--text-muted); }
+  td input:focus { background: rgba(14, 165, 233, 0.05); border-radius: 2px; }
+  tr:hover td { background: rgba(14, 165, 233, 0.06); }
 
   .row-num {
-    color: #475569;
-    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
     text-align: center;
     width: 30px;
     padding: 0.5rem 0.4rem;
     user-select: none;
+    font-family: 'Orbitron', sans-serif;
   }
 
   .del-row-btn {
-    background: none; border: none; color: #64748b;
-    cursor: pointer; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s;
   }
-  .del-row-btn:hover { color: #f87171; background: #7f1d1d44; }
+
+  .del-row-btn:hover {
+    color: var(--accent-red);
+    background: rgba(239, 68, 68, 0.1);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+  }
 
   /* Results */
-  .result-section { margin-bottom: 1.25rem; }
+  .result-section { margin-bottom: 1.25rem; animation: slideIn 0.4s ease; }
+
   .result-section h3 {
-    font-size: 0.95rem;
-    color: #94a3b8;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-dim);
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border-dim);
     padding-bottom: 0.35rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
   }
 
   .entropy-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #38bdf8;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.15);
+    letter-spacing: 2px;
   }
 
-  .gain-bar-wrap { margin-bottom: 0.6rem; }
+  .gain-bar-wrap { margin-bottom: 0.7rem; animation: slideIn 0.5s ease; }
 
   .gain-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
-    margin-bottom: 0.2rem;
+    font-size: 0.82rem;
+    margin-bottom: 0.25rem;
   }
 
-  .gain-label .attr-name { font-weight: 600; color: #e2e8f0; }
-  .gain-label .attr-val { color: #38bdf8; font-family: 'Courier New', monospace; }
+  .gain-label .attr-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+
+  .gain-label .attr-val {
+    color: var(--accent-cyan);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
 
   .gain-bar-bg {
-    height: 22px;
-    background: #0f172a;
-    border-radius: 6px;
+    height: 24px;
+    background: var(--bg-deep);
+    border-radius: 3px;
     overflow: hidden;
+    border: 1px solid var(--border-dim);
+    position: relative;
   }
 
   .gain-bar-fill {
     height: 100%;
-    border-radius: 6px;
-    transition: width 0.5s ease;
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
     min-width: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gain-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      rgba(255,255,255,0.05) 4px,
+      rgba(255,255,255,0.05) 8px
+    );
   }
 
   /* Explanation */
   .math-steps {
-    font-family: 'Courier New', monospace;
-    font-size: 0.8rem;
-    color: #94a3b8;
-    background: #0f172a;
-    border-radius: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    background: var(--bg-deep);
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
     padding: 1rem;
     max-height: 500px;
     overflow-y: auto;
-    line-height: 1.8;
+    line-height: 1.9;
     white-space: pre-wrap;
+    position: relative;
   }
 
-  .math-steps .highlight { color: #38bdf8; font-weight: 600; }
+  .math-steps::-webkit-scrollbar { width: 6px; }
+  .math-steps::-webkit-scrollbar-track { background: var(--bg-deep); }
+  .math-steps::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+
+  .math-steps .highlight {
+    color: var(--accent-cyan);
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+  }
+
   .math-steps .formula { color: #a78bfa; }
-  .math-steps .section-title { color: #f59e0b; font-weight: 700; font-size: 0.9rem; }
+
+  .math-steps .section-title {
+    color: var(--accent-gold);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+  }
 
   /* Tree */
   .tree-container {
     overflow: auto;
-    background: #0f172a;
-    border-radius: 8px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
     min-height: 300px;
     position: relative;
   }
 
+  .tree-container::-webkit-scrollbar { width: 6px; height: 6px; }
+  .tree-container::-webkit-scrollbar-track { background: var(--bg-deep); }
+  .tree-container::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+
   .tree-container svg { display: block; }
 
   .tree-node rect {
-    rx: 8; ry: 8;
-    stroke-width: 2;
+    rx: 4; ry: 4;
+    stroke-width: 1.5;
   }
 
   .tree-node text {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: 12px;
-    fill: #e2e8f0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    fill: var(--text-primary);
     text-anchor: middle;
     dominant-baseline: middle;
   }
 
   .tree-edge {
-    stroke: #475569;
-    stroke-width: 2;
+    stroke: rgba(14, 165, 233, 0.25);
+    stroke-width: 1.5;
     fill: none;
   }
 
   .edge-label {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: 11px;
-    fill: #94a3b8;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    fill: var(--text-dim);
     text-anchor: middle;
   }
 
   .no-data {
     text-align: center;
-    color: #475569;
+    color: var(--text-muted);
     padding: 3rem 1rem;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
   }
+
+  .no-data strong { color: var(--accent-blue); }
+
+  .hint-text {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-top: 0.5rem;
+    letter-spacing: 0.5px;
+  }
+
+  .hint-text strong { color: var(--accent-gold); text-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+
+  /* Floating particles container */
+  .particles {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    opacity: 0;
+    animation: floatParticle linear infinite;
+  }
+
+  @keyframes floatParticle {
+    0% { opacity: 0; transform: translateY(100vh) scale(0); }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s;
+    border: 1px solid var(--accent-blue);
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.15);
+    backdrop-filter: blur(8px);
+  }
+
+  .theme-toggle:hover {
+    background: rgba(14, 165, 233, 0.2);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+  }
+
+  .theme-toggle::before { display: none; }
+
+  /* ============================
+     CLEAN THEME
+     ============================ */
+  body.clean-theme {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+
+  body.clean-theme::before,
+  body.clean-theme::after { display: none; }
+
+  body.clean-theme .particles { display: none; }
+
+  body.clean-theme .arc-reactor { display: none; }
+
+  body.clean-theme header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid #334155;
+  }
+
+  body.clean-theme header::before,
+  body.clean-theme header::after { display: none; }
+
+  body.clean-theme header h1 {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: 0;
+    text-transform: none;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: none;
+  }
+
+  body.clean-theme header .subtitle {
+    font-size: 0.9rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #94a3b8;
+  }
+
+  body.clean-theme .status-bar { display: none; }
+
+  body.clean-theme .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    animation: none;
+  }
+
+  body.clean-theme .card::before,
+  body.clean-theme .card::after { display: none; }
+
+  body.clean-theme .card h2 {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.1rem;
+    color: #f1f5f9;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  body.clean-theme .card h2 .icon {
+    border-radius: 6px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    border: none;
+  }
+
+  body.clean-theme .card h2 .divider-line { display: none; }
+
+  body.clean-theme button {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    border-radius: 8px;
+    background: #334155;
+    border-color: #475569;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 0.85rem;
+  }
+
+  body.clean-theme button::before { display: none; }
+  body.clean-theme button:hover { background: #475569; border-color: #64748b; color: #e2e8f0; box-shadow: none; }
+
+  body.clean-theme .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    border: none;
+    color: #fff;
+    font-size: 0.95rem;
+    box-shadow: none;
+  }
+
+  body.clean-theme .btn-primary:hover { opacity: 0.9; background: linear-gradient(135deg, #3b82f6, #6366f1); box-shadow: none; }
+
+  body.clean-theme .btn-danger { border-color: #ef4444; color: #f87171; background: #334155; }
+  body.clean-theme .btn-danger:hover { background: #7f1d1d; box-shadow: none; }
+
+  body.clean-theme th {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: inherit;
+    letter-spacing: 0;
+    text-transform: none;
+    background: #0f172a;
+    font-weight: 600;
+  }
+
+  body.clean-theme th.target-col { color: #f59e0b; }
+
+  body.clean-theme th, body.clean-theme td {
+    border-color: #334155;
+  }
+
+  body.clean-theme td { background: #1e293b; }
+  body.clean-theme tr:hover td { background: #263348; }
+
+  body.clean-theme th input, body.clean-theme td input {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  body.clean-theme td input:focus { background: #0f172a; }
+
+  body.clean-theme .table-wrap { border: none; border-radius: 0; }
+
+  body.clean-theme .row-num { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.75rem; }
+
+  body.clean-theme .result-section h3 {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.95rem;
+    color: #94a3b8;
+    letter-spacing: 0;
+    text-transform: none;
+    border-color: #334155;
+  }
+
+  body.clean-theme .entropy-value {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.5rem;
+    color: #38bdf8;
+    text-shadow: none;
+    letter-spacing: 0;
+  }
+
+  body.clean-theme .gain-label .attr-val {
+    font-family: 'Courier New', monospace;
+    color: #38bdf8;
+    font-size: 0.85rem;
+  }
+
+  body.clean-theme .gain-bar-bg {
+    background: #0f172a;
+    border-radius: 6px;
+    border: none;
+  }
+
+  body.clean-theme .gain-bar-fill { border-radius: 6px; }
+  body.clean-theme .gain-bar-fill::after { display: none; }
+
+  body.clean-theme .math-steps {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    background: #0f172a;
+    border: none;
+    border-radius: 8px;
+  }
+
+  body.clean-theme .math-steps .highlight { color: #38bdf8; text-shadow: none; }
+  body.clean-theme .math-steps .section-title {
+    font-family: 'Courier New', monospace;
+    color: #f59e0b;
+    letter-spacing: 0;
+    text-shadow: none;
+  }
+
+  body.clean-theme .tree-container {
+    background: #0f172a;
+    border: none;
+    border-radius: 8px;
+  }
+
+  body.clean-theme .tree-edge { stroke: #475569; stroke-width: 2; }
+
+  body.clean-theme .no-data { color: #475569; letter-spacing: 0; }
+  body.clean-theme .no-data strong { color: inherit; }
+
+  body.clean-theme .hint-text { color: #64748b; letter-spacing: 0; }
+
+  body.clean-theme .theme-toggle {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+    box-shadow: none;
+    letter-spacing: 0;
+    text-transform: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+  }
+
+  body.clean-theme .theme-toggle:hover { background: #475569; box-shadow: none; }
 
   @media (max-width: 900px) {
     .container { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.1rem; letter-spacing: 1px; }
+    body.clean-theme header h1 { letter-spacing: 0; font-size: 1.4rem; }
   }
 </style>
 </head>
 <body>
 
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">Clean Mode</button>
+
+<!-- Floating particles -->
+<div class="particles" id="particles"></div>
+
 <header>
+  <div class="arc-reactor"></div>
   <h1>Information Gain Calculator</h1>
-  <p>Build decision trees with step-by-step entropy calculations</p>
+  <p class="subtitle">Decision Tree Builder // Entropy Analysis System</p>
+  <div class="status-bar">
+    <span><span class="status-dot green"></span>System Online</span>
+    <span><span class="status-dot blue"></span>ID3 Engine Ready</span>
+    <span><span class="status-dot gold"></span>Awaiting Data</span>
+  </div>
 </header>
 <!-- TAG: IC | XC ; NI | KA -->
 
@@ -279,52 +902,84 @@
 
   <!-- Dataset Input -->
   <div class="card full-width">
-    <h2><span class="icon" style="background:#3b82f622;color:#3b82f6;">T</span> Dataset</h2>
+    <h2>
+      <span class="icon" style="background:rgba(14,165,233,0.1);color:var(--accent-blue);border-color:rgba(14,165,233,0.3);">01</span>
+      Dataset Input
+      <span class="divider-line"></span>
+    </h2>
     <div class="btn-row">
       <button onclick="loadSampleData()" class="btn-primary">Load Sample Data</button>
       <button onclick="addColumn()">+ Column</button>
       <button onclick="addRow()">+ Row</button>
       <button onclick="removeLastColumn()" class="btn-danger">- Column</button>
-      <button onclick="clearData()" class="btn-danger">Clear</button>
+      <button onclick="clearData()" class="btn-danger">Clear All</button>
       <span style="flex:1"></span>
-      <button onclick="calculate()" class="btn-primary" id="calcBtn">Calculate Information Gain</button>
+      <button onclick="calculate()" class="btn-primary" id="calcBtn">Execute Analysis</button>
     </div>
     <div class="table-wrap">
       <table id="dataTable"><thead><tr></tr></thead><tbody></tbody></table>
     </div>
-    <p style="color:#64748b;font-size:0.78rem;margin-top:0.5rem;">
-      The <strong style="color:#f59e0b;">last column</strong> is treated as the target/label. Edit headers to name attributes.
-      Tip: copy cells in Excel and paste into any table cell.
+    <p class="hint-text">
+      The <strong>last column</strong> is the target/label. Edit headers to name attributes.
+      Paste from Excel supported.
     </p>
   </div>
 
   <!-- Information Gain Results -->
   <div class="card">
-    <h2><span class="icon" style="background:#10b98122;color:#10b981;">G</span> Information Gain</h2>
+    <h2>
+      <span class="icon" style="background:rgba(34,211,238,0.1);color:var(--accent-cyan);border-color:rgba(34,211,238,0.3);">02</span>
+      Information Gain
+      <span class="divider-line"></span>
+    </h2>
     <div id="resultsPanel">
-      <div class="no-data">Enter data and click <strong>Calculate</strong> to see results.</div>
+      <div class="no-data">Enter data and <strong>execute analysis</strong> to see results.</div>
     </div>
   </div>
 
   <!-- Step-by-step Explanation -->
   <div class="card">
-    <h2><span class="icon" style="background:#a78bfa22;color:#a78bfa;">E</span> Step-by-Step Explanation</h2>
+    <h2>
+      <span class="icon" style="background:rgba(167,139,250,0.1);color:#a78bfa;border-color:rgba(167,139,250,0.3);">03</span>
+      Computation Log
+      <span class="divider-line"></span>
+    </h2>
     <div id="explanationPanel">
-      <div class="no-data">Calculation steps will appear here.</div>
+      <div class="no-data">Computation trace will render here.</div>
     </div>
   </div>
 
   <!-- Decision Tree -->
   <div class="card full-width">
-    <h2><span class="icon" style="background:#f59e0b22;color:#f59e0b;">D</span> Decision Tree</h2>
+    <h2>
+      <span class="icon" style="background:rgba(245,158,11,0.1);color:var(--accent-gold);border-color:rgba(245,158,11,0.3);">04</span>
+      Decision Tree Visualization
+      <span class="divider-line"></span>
+    </h2>
     <div class="tree-container" id="treeContainer">
-      <div class="no-data">The decision tree will be visualized here after calculation.</div>
+      <div class="no-data">Decision tree will materialize after analysis.</div>
     </div>
   </div>
 
 </div>
 
 <script>
+// ---- Particles ----
+(function initParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 15) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+    if (Math.random() > 0.7) p.style.background = '#22d3ee';
+    if (Math.random() > 0.9) p.style.background = '#f59e0b';
+    container.appendChild(p);
+  }
+})();
+
 // ---- State ----
 let columns = [];
 let rows = [];
@@ -336,7 +991,6 @@ function renderTable() {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
-  // Row number header
   const thNum = document.createElement('th');
   thNum.className = 'row-num';
   thNum.textContent = '#';
@@ -353,7 +1007,6 @@ function renderTable() {
     thead.appendChild(th);
   });
 
-  // Delete header
   const thDel = document.createElement('th');
   thDel.style.width = '30px';
   thead.appendChild(thDel);
@@ -406,11 +1059,7 @@ function ensureShape(requiredRows, requiredCols) {
       rows.forEach(r => r.splice(insertAt, 0, ''));
     }
   }
-
-  rows.forEach(r => {
-    while (r.length < columns.length) r.push('');
-  });
-
+  rows.forEach(r => { while (r.length < columns.length) r.push(''); });
   while (rows.length < requiredRows) {
     rows.push(new Array(columns.length).fill(''));
   }
@@ -419,50 +1068,30 @@ function ensureShape(requiredRows, requiredCols) {
 function handleCellPaste(event, startRow, startCol) {
   const raw = event.clipboardData && event.clipboardData.getData('text');
   if (!raw) return;
-
   if (!raw.includes('\t') && !raw.includes('\n') && !raw.includes('\r')) return;
   event.preventDefault();
-
   const matrix = parsePastedMatrix(raw);
   if (matrix.length === 0) return;
-
   const maxCols = Math.max(...matrix.map(r => r.length), 0);
   if (maxCols === 0) return;
-
   ensureShape(startRow + matrix.length, startCol + maxCols);
   matrix.forEach((r, ri) => {
-    r.forEach((val, ci) => {
-      rows[startRow + ri][startCol + ci] = val;
-    });
+    r.forEach((val, ci) => { rows[startRow + ri][startCol + ci] = val; });
   });
   renderTable();
 }
 
-function addColumn() {
-  columns.push('');
-  rows.forEach(r => r.push(''));
-  renderTable();
-}
-
-function addRow() {
-  rows.push(new Array(columns.length).fill(''));
-  renderTable();
-}
-
-function removeLastColumn() {
-  if (columns.length <= 1) return;
-  columns.pop();
-  rows.forEach(r => r.pop());
-  renderTable();
-}
+function addColumn() { columns.push(''); rows.forEach(r => r.push('')); renderTable(); }
+function addRow() { rows.push(new Array(columns.length).fill('')); renderTable(); }
+function removeLastColumn() { if (columns.length <= 1) return; columns.pop(); rows.forEach(r => r.pop()); renderTable(); }
 
 function clearData() {
   columns = ['Attr 1', 'Target'];
   rows = [['', '']];
   renderTable();
-  document.getElementById('resultsPanel').innerHTML = '<div class="no-data">Enter data and click <strong>Calculate</strong> to see results.</div>';
-  document.getElementById('explanationPanel').innerHTML = '<div class="no-data">Calculation steps will appear here.</div>';
-  document.getElementById('treeContainer').innerHTML = '<div class="no-data">The decision tree will be visualized here after calculation.</div>';
+  document.getElementById('resultsPanel').innerHTML = '<div class="no-data">Enter data and <strong>execute analysis</strong> to see results.</div>';
+  document.getElementById('explanationPanel').innerHTML = '<div class="no-data">Computation trace will render here.</div>';
+  document.getElementById('treeContainer').innerHTML = '<div class="no-data">Decision tree will materialize after analysis.</div>';
 }
 
 function loadSampleData() {
@@ -493,10 +1122,7 @@ function entropy(counts) {
   const total = counts.reduce((a, b) => a + b, 0);
   if (total === 0) return 0;
   let h = 0;
-  for (const c of counts) {
-    const p = c / total;
-    h -= p * log2(p);
-  }
+  for (const c of counts) { const p = c / total; h -= p * log2(p); }
   return h;
 }
 
@@ -508,7 +1134,6 @@ function countValues(arr) {
 
 // ---- Calculation ----
 function calculate() {
-  // Parse data
   const nCols = columns.length;
   if (nCols < 2) { alert('Need at least one attribute and one target column.'); return; }
 
@@ -526,8 +1151,7 @@ function calculate() {
   const gains = [];
   let explanation = '';
 
-  // Overall entropy
-  explanation += `<span class="section-title">OVERALL ENTROPY (${columns[targetIdx]})</span>\n`;
+  explanation += `<span class="section-title">// OVERALL ENTROPY (${columns[targetIdx]})</span>\n`;
   explanation += `Total samples: ${validRows.length}\n`;
   for (const [val, cnt] of Object.entries(targetCounts)) {
     explanation += `  ${val}: ${cnt} (${(cnt / validRows.length * 100).toFixed(1)}%)\n`;
@@ -535,19 +1159,17 @@ function calculate() {
   explanation += `\n<span class="formula">H(S) = `;
   const parts = [];
   for (const [val, cnt] of Object.entries(targetCounts)) {
-    const p = cnt / validRows.length;
     parts.push(`-(${cnt}/${validRows.length}) * log2(${cnt}/${validRows.length})`);
   }
   explanation += parts.join('\n       ');
   explanation += `</span>\n<span class="highlight">H(S) = ${totalEntropy.toFixed(4)}</span>\n\n`;
 
-  // Per attribute
   for (const ai of attrIndices) {
     const attrName = columns[ai] || `Attr ${ai + 1}`;
     const attrValues = validRows.map(r => r[ai]);
     const uniqueVals = [...new Set(attrValues)];
 
-    explanation += `<span class="section-title">ATTRIBUTE: ${attrName}</span>\n`;
+    explanation += `<span class="section-title">// ATTRIBUTE: ${attrName}</span>\n`;
 
     let condEntropy = 0;
     const subsets = {};
@@ -558,7 +1180,6 @@ function calculate() {
       const subH = entropy(Object.values(subTargetCounts));
       const weight = subset.length / validRows.length;
       condEntropy += weight * subH;
-
       subsets[val] = { count: subset.length, targetCounts: subTargetCounts, entropy: subH, weight };
 
       explanation += `  ${attrName} = "${val}" (${subset.length}/${validRows.length}):\n`;
@@ -581,31 +1202,33 @@ function calculate() {
 
   gains.sort((a, b) => b.gain - a.gain);
 
-  // Render results panel
   const maxGain = Math.max(...gains.map(g => g.gain), 0.001);
-  const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#34d399', '#fbbf24', '#fb923c'];
+  const colors = ['#0ea5e9', '#22d3ee', '#818cf8', '#a78bfa', '#f59e0b', '#ef4444', '#22c55e'];
 
-  let html = `<div class="result-section"><h3>Dataset Entropy</h3><div class="entropy-value">${totalEntropy.toFixed(4)}</div><p style="color:#64748b;font-size:0.8rem;margin-top:0.25rem;">${validRows.length} samples, ${Object.keys(targetCounts).length} classes</p></div>`;
-  html += `<div class="result-section"><h3>Information Gain by Attribute</h3>`;
+  let html = `<div class="result-section"><h3>Dataset Entropy</h3><div class="entropy-value">${totalEntropy.toFixed(4)}</div><p style="color:var(--text-muted);font-size:0.75rem;margin-top:0.25rem;">${validRows.length} samples // ${Object.keys(targetCounts).length} classes</p></div>`;
+  html += `<div class="result-section"><h3>Gain by Attribute</h3>`;
 
   gains.forEach((g, i) => {
     const pct = (g.gain / maxGain) * 100;
     const color = colors[i % colors.length];
     html += `<div class="gain-bar-wrap">
       <div class="gain-label"><span class="attr-name">${g.name}</span><span class="attr-val">${g.gain.toFixed(4)}</span></div>
-      <div class="gain-bar-bg"><div class="gain-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      <div class="gain-bar-bg"><div class="gain-bar-fill" style="width:${pct}%;background:linear-gradient(90deg, ${color}, ${color}88);box-shadow:0 0 12px ${color}44;"></div></div>
     </div>`;
   });
 
   html += `</div>`;
   document.getElementById('resultsPanel').innerHTML = html;
-
-  // Render explanation
   document.getElementById('explanationPanel').innerHTML = `<div class="math-steps">${explanation}</div>`;
 
-  // Build and render tree
   const tree = buildID3(validRows, attrIndices.slice(), targetIdx);
   renderTree(tree);
+
+  // Update status indicator
+  const dots = document.querySelectorAll('.status-dot.gold');
+  dots.forEach(d => { d.className = 'status-dot green'; });
+  const statusTexts = document.querySelectorAll('.status-bar span');
+  if (statusTexts[2]) statusTexts[2].innerHTML = '<span class="status-dot green"></span>Analysis Complete';
 }
 
 // ---- ID3 ----
@@ -613,19 +1236,14 @@ function buildID3(data, availableAttrs, targetIdx) {
   const targets = data.map(r => r[targetIdx]);
   const unique = [...new Set(targets)];
 
-  // Pure node
-  if (unique.length === 1) {
-    return { type: 'leaf', label: unique[0], count: data.length };
-  }
+  if (unique.length === 1) return { type: 'leaf', label: unique[0], count: data.length };
 
-  // No attributes left — majority vote
   if (availableAttrs.length === 0) {
     const tc = countValues(targets);
     const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
     return { type: 'leaf', label: majority, count: data.length };
   }
 
-  // Find best attribute
   const totalH = entropy(Object.values(countValues(targets)));
   let bestAttr = availableAttrs[0];
   let bestGain = -1;
@@ -659,19 +1277,9 @@ function buildID3(data, availableAttrs, targetIdx) {
     if (subset.length === 0) {
       const tc = countValues(targets);
       const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
-      node.children.push({
-        edgeLabel: v,
-        edgeCount: 0,
-        edgeRatio,
-        child: { type: 'leaf', label: majority, count: 0 }
-      });
+      node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0 } });
     } else {
-      node.children.push({
-        edgeLabel: v,
-        edgeCount: subset.length,
-        edgeRatio,
-        child: buildID3(subset, remaining, targetIdx)
-      });
+      node.children.push({ edgeLabel: v, edgeCount: subset.length, edgeRatio, child: buildID3(subset, remaining, targetIdx) });
     }
   }
 
@@ -692,6 +1300,10 @@ function renderTree(tree) {
   const offsetY = -minY + padding;
 
   let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glowGold"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
   svg += renderEdges(layout, offsetX, offsetY);
   svg += renderNodes(layout, offsetX, offsetY, undefined, totalCount);
   svg += `</svg>`;
@@ -726,28 +1338,18 @@ function layoutTree(node, depth, index) {
     cx += cl.width + H_GAP;
   }
 
-  return {
-    node,
-    x: 0,
-    y: depth * (NODE_H + V_GAP),
-    width: nodeWidth,
-    children: childLayouts
-  };
+  return { node, x: 0, y: depth * (NODE_H + V_GAP), width: nodeWidth, children: childLayouts };
 }
 
 function getBounds(layout) {
   const selfW = layout.node.type === 'leaf' ? LEAF_W : NODE_W;
   const selfH = layout.node.type === 'leaf' ? LEAF_H : NODE_H;
-  let minX = layout.x - selfW / 2;
-  let maxX = layout.x + selfW / 2;
-  let minY = layout.y - selfH / 2;
-  let maxY = layout.y + selfH / 2;
+  let minX = layout.x - selfW / 2, maxX = layout.x + selfW / 2;
+  let minY = layout.y - selfH / 2, maxY = layout.y + selfH / 2;
   for (const c of layout.children) {
     const b = getBoundsOffset(c, layout.x);
-    minX = Math.min(minX, b.minX);
-    maxX = Math.max(maxX, b.maxX);
-    minY = Math.min(minY, b.minY);
-    maxY = Math.max(maxY, b.maxY);
+    minX = Math.min(minX, b.minX); maxX = Math.max(maxX, b.maxX);
+    minY = Math.min(minY, b.minY); maxY = Math.max(maxY, b.maxY);
   }
   return { minX, maxX, minY, maxY };
 }
@@ -756,16 +1358,12 @@ function getBoundsOffset(layout, parentX) {
   const absX = parentX + layout.x;
   const w = layout.node.type === 'leaf' ? LEAF_W : NODE_W;
   const h = layout.node.type === 'leaf' ? LEAF_H : NODE_H;
-  let minX = absX - w / 2;
-  let maxX = absX + w / 2;
-  let minY = layout.y - h / 2;
-  let maxY = layout.y + h / 2;
+  let minX = absX - w / 2, maxX = absX + w / 2;
+  let minY = layout.y - h / 2, maxY = layout.y + h / 2;
   for (const c of layout.children) {
     const b = getBoundsOffset(c, absX);
-    minX = Math.min(minX, b.minX);
-    maxX = Math.max(maxX, b.maxX);
-    minY = Math.min(minY, b.minY);
-    maxY = Math.max(maxY, b.maxY);
+    minX = Math.min(minX, b.minX); maxX = Math.max(maxX, b.maxX);
+    minY = Math.min(minY, b.minY); maxY = Math.max(maxY, b.maxY);
   }
   return { minX, maxX, minY, maxY };
 }
@@ -782,7 +1380,6 @@ function renderEdges(layout, offX, offY, parentAbsX) {
     const cAbsY = c.y + offY;
     const midY = (absY + NODE_H + cAbsY) / 2;
     svg += `<path class="tree-edge" d="M${absX},${absY + NODE_H / 2} C${absX},${midY} ${cAbsX},${midY} ${cAbsX},${cAbsY - (c.node.type === 'leaf' ? LEAF_H : NODE_H) / 2}"/>`;
-    // Place labels closer to child branches to reduce overlap on multi-way splits.
     const childTop = cAbsY - (c.node.type === 'leaf' ? LEAF_H : NODE_H) / 2;
     const lx = absX + (cAbsX - absX) * 0.7;
     const stagger = (i - (siblings - 1) / 2) * 10;
@@ -790,7 +1387,7 @@ function renderEdges(layout, offX, offY, parentAbsX) {
     const edgePct = ((c.edgeRatio || 0) * 100).toFixed(1);
     const edgeText = `${c.edgeLabel} (${edgePct}%)`;
     const boxW = Math.max(58, Math.min(140, edgeText.length * 6.1 + 14));
-    svg += `<rect x="${lx - boxW / 2}" y="${ly - 10}" width="${boxW}" height="20" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>`;
+    svg += `<rect x="${lx - boxW / 2}" y="${ly - 10}" width="${boxW}" height="20" rx="3" fill="#0a1118" stroke="#1a2a3a" stroke-width="1"/>`;
     svg += `<text class="edge-label" x="${lx}" y="${ly + 3}">${escHTML(edgeText)}</text>`;
     svg += renderEdges(c, offX, offY, absX);
   }
@@ -806,15 +1403,15 @@ function renderNodes(layout, offX, offY, parentAbsX, totalCount) {
 
   if (layout.node.type === 'leaf') {
     svg += `<g class="tree-node">`;
-    svg += `<rect x="${absX - LEAF_W / 2}" y="${absY - LEAF_H / 2}" width="${LEAF_W}" height="${LEAF_H}" fill="#064e3b" stroke="#10b981"/>`;
-    svg += `<text x="${absX}" y="${absY - 4}">${escHTML(layout.node.label)}</text>`;
-    svg += `<text class="edge-label" x="${absX}" y="${absY + 10}">${nodeCount} (${nodePct}%)</text>`;
+    svg += `<rect x="${absX - LEAF_W / 2}" y="${absY - LEAF_H / 2}" width="${LEAF_W}" height="${LEAF_H}" fill="#0a1a10" stroke="#22c55e" filter="url(#glowGold)" stroke-opacity="0.6"/>`;
+    svg += `<text x="${absX}" y="${absY - 4}" style="fill:#22c55e;font-weight:bold;">${escHTML(layout.node.label)}</text>`;
+    svg += `<text class="edge-label" x="${absX}" y="${absY + 12}" style="font-size:9px;">${nodeCount} (${nodePct}%)</text>`;
     svg += `</g>`;
   } else {
     svg += `<g class="tree-node">`;
-    svg += `<rect x="${absX - NODE_W / 2}" y="${absY - NODE_H / 2}" width="${NODE_W}" height="${NODE_H}" fill="#1e3a5f" stroke="#3b82f6"/>`;
-    svg += `<text x="${absX}" y="${absY - 6}">${escHTML(layout.node.attribute)}</text>`;
-    svg += `<text class="edge-label" x="${absX}" y="${absY + 10}">${nodeCount} (${nodePct}%)</text>`;
+    svg += `<rect x="${absX - NODE_W / 2}" y="${absY - NODE_H / 2}" width="${NODE_W}" height="${NODE_H}" fill="#0a1520" stroke="#0ea5e9" filter="url(#glow)" stroke-opacity="0.5"/>`;
+    svg += `<text x="${absX}" y="${absY - 6}" style="fill:#22d3ee;font-weight:bold;">${escHTML(layout.node.attribute)}</text>`;
+    svg += `<text class="edge-label" x="${absX}" y="${absY + 12}" style="font-size:9px;">${nodeCount} (${nodePct}%)</text>`;
     svg += `</g>`;
   }
 
@@ -827,6 +1424,23 @@ function renderNodes(layout, offX, offY, parentAbsX, totalCount) {
 function escHTML(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ---- Theme Toggle ----
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeToggle');
+  body.classList.toggle('clean-theme');
+  const isClean = body.classList.contains('clean-theme');
+  btn.textContent = isClean ? 'HUD Mode' : 'Clean Mode';
+  localStorage.setItem('theme', isClean ? 'clean' : 'hud');
+}
+
+(function restoreTheme() {
+  if (localStorage.getItem('theme') === 'clean') {
+    document.body.classList.add('clean-theme');
+    document.getElementById('themeToggle').textContent = 'HUD Mode';
+  }
+})();
 
 // ---- Init ----
 columns = ['Attr 1', 'Attr 2', 'Target'];
