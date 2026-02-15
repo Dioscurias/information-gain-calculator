@@ -1235,13 +1235,14 @@ function calculate() {
 function buildID3(data, availableAttrs, targetIdx) {
   const targets = data.map(r => r[targetIdx]);
   const unique = [...new Set(targets)];
+  const targetName = columns[targetIdx] || 'Target';
+  const tc = countValues(targets);
 
-  if (unique.length === 1) return { type: 'leaf', label: unique[0], count: data.length };
+  if (unique.length === 1) return { type: 'leaf', label: unique[0], count: data.length, targetName, classCounts: tc };
 
   if (availableAttrs.length === 0) {
-    const tc = countValues(targets);
     const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
-    return { type: 'leaf', label: majority, count: data.length };
+    return { type: 'leaf', label: majority, count: data.length, targetName, classCounts: tc };
   }
 
   const totalH = entropy(Object.values(countValues(targets)));
@@ -1275,9 +1276,8 @@ function buildID3(data, availableAttrs, targetIdx) {
     const subset = data.filter(r => r[bestAttr] === v);
     const edgeRatio = subset.length / data.length;
     if (subset.length === 0) {
-      const tc = countValues(targets);
       const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
-      node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0 } });
+      node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0, targetName, classCounts: {} } });
     } else {
       node.children.push({ edgeLabel: v, edgeCount: subset.length, edgeRatio, child: buildID3(subset, remaining, targetIdx) });
     }
@@ -1310,12 +1310,12 @@ function renderTree(tree) {
   container.innerHTML = svg;
 }
 
-const NODE_W = 130;
+const NODE_W = 140;
 const NODE_H = 52;
-const LEAF_W = 100;
-const LEAF_H = 46;
+const LEAF_W = 140;
+const LEAF_H = 62;
 const H_GAP = 44;
-const V_GAP = 90;
+const V_GAP = 100;
 
 function layoutTree(node, depth, index) {
   if (node.type === 'leaf') {
@@ -1402,10 +1402,14 @@ function renderNodes(layout, offX, offY, parentAbsX, totalCount) {
   const nodePct = totalCount > 0 ? ((nodeCount / totalCount) * 100).toFixed(1) : '0.0';
 
   if (layout.node.type === 'leaf') {
+    const tName = layout.node.targetName || 'Target';
+    const classCounts = layout.node.classCounts || {};
+    const classStr = Object.entries(classCounts).map(([k,v]) => `${k}:${v}`).join(' | ');
     svg += `<g class="tree-node">`;
     svg += `<rect x="${absX - LEAF_W / 2}" y="${absY - LEAF_H / 2}" width="${LEAF_W}" height="${LEAF_H}" fill="#0a1a10" stroke="#22c55e" filter="url(#glowGold)" stroke-opacity="0.6"/>`;
-    svg += `<text x="${absX}" y="${absY - 4}" style="fill:#22c55e;font-weight:bold;">${escHTML(layout.node.label)}</text>`;
-    svg += `<text class="edge-label" x="${absX}" y="${absY + 12}" style="font-size:9px;">${nodeCount} (${nodePct}%)</text>`;
+    svg += `<text x="${absX}" y="${absY - 16}" style="fill:#64748b;font-size:9px;">${escHTML(tName)}</text>`;
+    svg += `<text x="${absX}" y="${absY}" style="fill:#22c55e;font-weight:bold;font-size:13px;">${escHTML(layout.node.label)}</text>`;
+    svg += `<text class="edge-label" x="${absX}" y="${absY + 16}" style="font-size:8px;">${classStr ? escHTML(classStr) : nodeCount + ' (' + nodePct + '%)'}</text>`;
     svg += `</g>`;
   } else {
     svg += `<g class="tree-node">`;
