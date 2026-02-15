@@ -1221,7 +1221,12 @@ function calculate() {
   document.getElementById('resultsPanel').innerHTML = html;
   document.getElementById('explanationPanel').innerHTML = `<div class="math-steps">${explanation}</div>`;
 
-  const tree = buildID3(validRows, attrIndices.slice(), targetIdx);
+  // Pre-compute all unique values per attribute (for symmetric tree)
+  const globalAttrValues = {};
+  for (const ai of attrIndices) {
+    globalAttrValues[ai] = [...new Set(validRows.map(r => r[ai]))];
+  }
+  const tree = buildID3(validRows, attrIndices.slice(), targetIdx, globalAttrValues);
   renderTree(tree);
 
   // Update status indicator
@@ -1232,9 +1237,8 @@ function calculate() {
 }
 
 // ---- ID3 ----
-function buildID3(data, availableAttrs, targetIdx) {
+function buildID3(data, availableAttrs, targetIdx, globalAttrValues) {
   const targets = data.map(r => r[targetIdx]);
-  const unique = [...new Set(targets)];
   const targetName = columns[targetIdx] || 'Target';
   const tc = countValues(targets);
   const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
@@ -1243,7 +1247,7 @@ function buildID3(data, availableAttrs, targetIdx) {
     return { type: 'leaf', label: majority, count: data.length, targetName, classCounts: tc };
   }
 
-  const totalH = entropy(Object.values(countValues(targets)));
+  const totalH = entropy(Object.values(tc));
   let bestAttr = availableAttrs[0];
   let bestGain = -1;
 
@@ -1267,7 +1271,8 @@ function buildID3(data, availableAttrs, targetIdx) {
     count: data.length
   };
 
-  const vals = [...new Set(data.map(r => r[bestAttr]))];
+  // Use ALL global values for this attribute so both sides of every split show the same branches
+  const vals = globalAttrValues[bestAttr] || [...new Set(data.map(r => r[bestAttr]))];
   const remaining = availableAttrs.filter(a => a !== bestAttr);
 
   const parentAttrName = node.attribute;
@@ -1275,10 +1280,9 @@ function buildID3(data, availableAttrs, targetIdx) {
     const subset = data.filter(r => r[bestAttr] === v);
     const edgeRatio = subset.length / data.length;
     if (subset.length === 0) {
-      const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
       node.children.push({ edgeLabel: v, edgeCount: 0, edgeRatio, child: { type: 'leaf', label: majority, count: 0, targetName, classCounts: {}, parentAttr: parentAttrName, parentValue: v } });
     } else {
-      const child = buildID3(subset, remaining, targetIdx);
+      const child = buildID3(subset, remaining, targetIdx, globalAttrValues);
       if (child.type === 'leaf') {
         child.parentAttr = parentAttrName;
         child.parentValue = v;
