@@ -1237,11 +1237,9 @@ function buildID3(data, availableAttrs, targetIdx) {
   const unique = [...new Set(targets)];
   const targetName = columns[targetIdx] || 'Target';
   const tc = countValues(targets);
-
-  if (unique.length === 1) return { type: 'leaf', label: unique[0], count: data.length, targetName, classCounts: tc };
+  const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
 
   if (availableAttrs.length === 0) {
-    const majority = Object.entries(tc).sort((a, b) => b[1] - a[1])[0][0];
     return { type: 'leaf', label: majority, count: data.length, targetName, classCounts: tc };
   }
 
